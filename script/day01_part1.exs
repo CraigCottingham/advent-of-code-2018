@@ -1,8 +1,8 @@
-defmodule Day01 do
+defmodule Day01.Part1 do
   @moduledoc false
 
   def run do
-    File.stream!("data/day01-1-input.txt")
+    File.stream!("data/day01-input.txt")
     |> Enum.map(&String.trim/1)
     |> Enum.map(&String.to_integer/1)
     |> Enum.reduce(0, fn delta, acc -> acc + delta end)
@@ -10,4 +10,4 @@ defmodule Day01 do
   end
 end
 
-Day01.run
+Day01.Part1.run
