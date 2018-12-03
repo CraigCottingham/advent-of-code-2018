@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+usage() {
+  echo "Usage: aoc <day> <part>"
+  echo "  day must be between 1 and 25 and may have a leading 0"
+  echo "  part must be either 1 or 2"
+  exit 1
+}
+
+if [[ $# < 2 ]]; then
+  usage
+fi
+
+if [[ ($1 < 1) || ($1 > 25) ]]; then
+  usage
+fi
+
+if [[ ($2 < 1) || ($2 > 2) ]]; then
+  usage
+fi
+
+day=$(printf "%02d" $1)
+part=$2
+
+mix run -e "AoC.Day${day}.part_${part}() |> IO.puts"
