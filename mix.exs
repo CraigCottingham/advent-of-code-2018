@@ -1,4 +1,6 @@
 defmodule AoC.MixProject do
+  @moduledoc false
+
   use Mix.Project
 
   def project do
@@ -27,6 +29,7 @@ defmodule AoC.MixProject do
       {:ex_machina, "~> 2.2"},
       {:faker, "~> 0.11.0", only: [:dev, :test], runtime: false},
       {:mix_test_watch, "~> 0.9.0", only: :dev, runtime: false},
+      {:yamerl, "~> 0.7.0", only: :test}
     ]
   end
 end
