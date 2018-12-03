@@ -1,7 +1,14 @@
-defmodule Day01.Part2 do
+defmodule AoC.Day01 do
   @moduledoc false
 
-  def run do
+  def part_1 do
+    File.stream!("data/day01-input.txt")
+    |> Enum.map(&String.trim/1)
+    |> Enum.map(&String.to_integer/1)
+    |> Enum.reduce(0, fn delta, acc -> acc + delta end)
+  end
+
+  def part_2 do
     File.stream!("data/day01-input.txt")
     |> Enum.map(&String.trim/1)
     |> Enum.map(&String.to_integer/1)
@@ -10,7 +17,6 @@ defmodule Day01.Part2 do
     |> Stream.cycle
     |> Enum.reduce_while({0, MapSet.new([0])}, &calc_new_frequency/2)
     |> elem(0)
-    |> IO.puts
   end
 
   defp calc_new_frequency(delta, {acc, seen}) do
@@ -22,5 +28,3 @@ defmodule Day01.Part2 do
     end
   end
 end
-
-Day01.Part2.run
