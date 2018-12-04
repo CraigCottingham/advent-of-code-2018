@@ -13,7 +13,7 @@ defmodule AoC.Day02 do
   def part_2 do
     File.stream!("data/day02-input.txt")
     |> Enum.map(&String.trim/1)
-    |> combinations(2)
+    |> AoC.combinations(2)
     |> Enum.map(fn pair -> calculate_difference(List.first(pair), List.last(pair)) end)
     |> Enum.map(fn {string1, string2, list} -> {string1, string2, Enum.filter(list, fn item -> elem(item, 0) != :eq end)} end)
     |> Enum.filter(fn {_, _, list} -> Enum.count(list) == 2 end)
@@ -40,12 +40,6 @@ defmodule AoC.Day02 do
             acc
           end
     acc
-  end
-
-  defp combinations(_, 0), do: [[]]
-  defp combinations([], _), do: []
-  defp combinations([string1 | rest], m) do
-    (for sublist <- combinations(rest, m - 1), do: [string1 | sublist]) ++ combinations(rest, m)
   end
 
   defp calculate_difference(string1, string2) do
