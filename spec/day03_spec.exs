@@ -13,9 +13,9 @@ defmodule AoC.Day03.Spec do
       expect(Map.has_key?(parsed(), :id)) |> to(be_truthy())
       expect(parsed().id) |> to(eq(1))
       expect(Map.has_key?(parsed(), :top)) |> to(be_truthy())
-      expect(parsed().top) |> to(eq(1))
+      expect(parsed().top) |> to(eq(3))
       expect(Map.has_key?(parsed(), :left)) |> to(be_truthy())
-      expect(parsed().left) |> to(eq(3))
+      expect(parsed().left) |> to(eq(1))
       expect(Map.has_key?(parsed(), :width)) |> to(be_truthy())
       expect(parsed().width) |> to(eq(4))
       expect(Map.has_key?(parsed(), :height)) |> to(be_truthy())
@@ -30,8 +30,8 @@ defmodule AoC.Day03.Spec do
     let :rect_4, do: AoC.Day03.parse_input_line!("#4 @ 7,8: 1x1")
 
     let :intersection_1_2, do: %{top: 2, left: 2, height: 2, width: 2}
-    let :intersection_2_3, do: %{top: 3, left: 3, height: 2, width: 1}
-    let :intersection_1_3, do: %{top: 3, left: 3, height: 1, width: 2}
+    let :intersection_2_3, do: %{top: 3, left: 3, height: 1, width: 2}
+    let :intersection_1_3, do: %{top: 3, left: 3, height: 2, width: 1}
     let :intersection_3_4, do: nil
 
     it do
@@ -44,27 +44,62 @@ defmodule AoC.Day03.Spec do
 
   describe "intersect_dimension/4" do
     it do
-      expect(AoC.Day03.intersect_dimension(1, 2, 3, 5)) |> to(eq({0, 0}))
-      expect(AoC.Day03.intersect_dimension(1, 3, 3, 5)) |> to(eq({0, 0}))
-      expect(AoC.Day03.intersect_dimension(1, 4, 3, 5)) |> to(eq({3, 1}))
-      expect(AoC.Day03.intersect_dimension(1, 5, 3, 5)) |> to(eq({3, 2}))
-      expect(AoC.Day03.intersect_dimension(1, 6, 3, 5)) |> to(eq({3, 2}))
-      expect(AoC.Day03.intersect_dimension(3, 4, 3, 5)) |> to(eq({3, 1}))
-      expect(AoC.Day03.intersect_dimension(3, 5, 3, 5)) |> to(eq({3, 2}))
-      expect(AoC.Day03.intersect_dimension(3, 6, 3, 5)) |> to(eq({3, 2}))
-      expect(AoC.Day03.intersect_dimension(4, 5, 3, 5)) |> to(eq({4, 1}))
-      expect(AoC.Day03.intersect_dimension(4, 6, 3, 5)) |> to(eq({4, 1}))
-      expect(AoC.Day03.intersect_dimension(5, 6, 3, 5)) |> to(eq({0, 0}))
-      expect(AoC.Day03.intersect_dimension(6, 7, 3, 5)) |> to(eq({0, 0}))
+      expect(AoC.Day03.intersect_dimension(1, 4, 9, 25)) |> to(eq({0, 0}))
+      expect(AoC.Day03.intersect_dimension(1, 9, 9, 25)) |> to(eq({0, 0}))
+      expect(AoC.Day03.intersect_dimension(1, 16, 9, 25)) |> to(eq({9, 7}))
+      expect(AoC.Day03.intersect_dimension(1, 25, 9, 25)) |> to(eq({9, 16}))
+      expect(AoC.Day03.intersect_dimension(1, 36, 9, 25)) |> to(eq({9, 16}))
+      expect(AoC.Day03.intersect_dimension(9, 16, 9, 25)) |> to(eq({9, 7}))
+      expect(AoC.Day03.intersect_dimension(9, 25, 9, 25)) |> to(eq({9, 16}))
+      expect(AoC.Day03.intersect_dimension(9, 36, 9, 25)) |> to(eq({9, 16}))
+      expect(AoC.Day03.intersect_dimension(16, 25, 9, 25)) |> to(eq({16, 9}))
+      expect(AoC.Day03.intersect_dimension(16, 36, 9, 25)) |> to(eq({16, 9}))
+      expect(AoC.Day03.intersect_dimension(25, 36, 9, 25)) |> to(eq({0, 0}))
+      expect(AoC.Day03.intersect_dimension(36, 49, 9, 25)) |> to(eq({0, 0}))
     end
   end
 
-  describe "tests" do
+  describe "union_rectangle/2" do
+    let :test_data, do: ["#1 @ 1,3: 4x4", "#2 @ 3,1: 4x4", "#3 @ 5,5: 2x2"]
+    let :union do
+      test_data()
+      |> Enum.map(&String.trim/1)
+      |> Enum.map(&AoC.Day03.parse_input_line!/1)
+      |> Enum.reduce(MapSet.new(), &AoC.Day03.union_rectangle/2)
+    end
+
+    it do
+      expect(MapSet.size(union())) |> to(eq(32))
+    end
+  end
+
+  describe "points_for_rect/1" do
+    let :rect, do: %{top: 1, left: 2, height: 3, width: 4}
+    let :points, do: AoC.Day03.points_for_rect(rect())
+
+    it do
+      expect(points()) |> to_not(be_nil())
+      expect(Enum.count(points())) |> to(eq(12))
+
+      expect(Enum.count(points(), fn point -> elem(point, 0) == rect().left end)) |> to(eq(3))
+      expect(Enum.count(points(), fn point -> elem(point, 0) == (rect().left + 1) end)) |> to(eq(3))
+      expect(Enum.count(points(), fn point -> elem(point, 0) == (rect().left + 2) end)) |> to(eq(3))
+      expect(Enum.count(points(), fn point -> elem(point, 0) == (rect().left + 3) end)) |> to(eq(3))
+
+      expect(Enum.count(points(), fn point -> elem(point, 1) == rect().top end)) |> to(eq(4))
+      expect(Enum.count(points(), fn point -> elem(point, 1) == (rect().top + 1) end)) |> to(eq(4))
+      expect(Enum.count(points(), fn point -> elem(point, 1) == (rect().top + 2) end)) |> to(eq(4))
+    end
+  end
+
+  describe "sanity checks" do
+    before do: allow File |> to(accept(:stream!, fn(_) -> test_data() end))
+
     context "using data from the puzzle" do
       let :test_data, do: ["#1 @ 1,3: 4x4", "#2 @ 3,1: 4x4", "#3 @ 5,5: 2x2"]
 
       it do
-        expect(run_test_data(test_data())) |> to(eq(4))
+        expect(AoC.Day03.part_1()) |> to(eq(4))
       end
     end
 
@@ -72,18 +107,16 @@ defmodule AoC.Day03.Spec do
       let :test_data, do: ["#1 @ 1,3: 4x4", "#2 @ 3,1: 4x4", "#3 @ 4,4: 2x2"]
 
       it do
-        expect(run_test_data(test_data())) |> to(eq(6))
+        expect(AoC.Day03.part_1()) |> to(eq(6))
       end
     end
-  end
 
-  defp run_test_data(data) do
-    data
-    |> Enum.map(&String.trim/1)
-    |> Enum.map(&AoC.Day03.parse_input_line!/1)
-    |> AoC.combinations(2)
-    |> Enum.reduce(MapSet.new(), fn pair, acc -> MapSet.put(acc, AoC.Day03.intersect_rectangles(pair)) end)
-    |> Enum.reduce(%{top: 0, left: 0, bottom: 0, right: 0, intersections: MapSet.new()}, &AoC.Day03.find_extremes/2)
-    |> AoC.Day03.count_overlaps()
+    context "with four coincident rectangles" do
+      let :test_data, do: ["#1 @ 5,5: 2x2", "#2 @ 5,5: 2x2", "#3 @ 5,5: 2x2", "#4 @ 5,5: 2x2"]
+
+      it do
+        expect(AoC.Day03.part_1()) |> to(eq(4))
+      end
+    end
   end
 end
