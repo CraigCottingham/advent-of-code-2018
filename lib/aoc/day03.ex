@@ -16,7 +16,7 @@ defmodule AoC.Day03 do
   # end
 
   def parse_input_line!(line) do
-    Regex.named_captures(~r/\A#(?<id>\d+)\s*@\s*(?<top>\d+)\s*,\s*(?<left>\d+)\s*:\s*(?<width>\d+)\s*x\s*(?<height>\d+)\z/, line)
+    Regex.named_captures(~r/\A#(?<id>\d+)\s*@\s*(?<left>\d+)\s*,\s*(?<top>\d+)\s*:\s*(?<width>\d+)\s*x\s*(?<height>\d+)\z/, line)
     |> Enum.reduce(%{}, fn {k, v}, acc -> Map.put(acc, String.to_atom(k), String.to_integer(v)) end)
   end
 
