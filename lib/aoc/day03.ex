@@ -12,9 +12,17 @@ defmodule AoC.Day03 do
     |> MapSet.size
   end
 
-  # def part_2 do
-  #   File.stream!("data/day03-input.txt")
-  # end
+  def part_2 do
+    File.stream!("data/day03-input.txt")
+    |> Enum.map(&String.trim/1)
+    |> Enum.map(&parse_input_line!/1)
+    |> set_from_list()
+    |> expand_list_to_combinations()
+    |> remove_intersecting_pairs_from_set()
+    |> MapSet.to_list()
+    |> List.first()
+    |> Map.get(:id)
+  end
 
   def parse_input_line!(line) do
     Regex.named_captures(~r/\A#(?<id>\d+)\s*@\s*(?<left>\d+)\s*,\s*(?<top>\d+)\s*:\s*(?<width>\d+)\s*x\s*(?<height>\d+)\z/, line)
@@ -60,4 +68,13 @@ defmodule AoC.Day03 do
       {(rect.left + x), (rect.top + y)}
     end
   end
+
+  def set_from_list(list), do: {MapSet.new(list), list}
+
+  def expand_list_to_combinations({set, list}), do: {set, AoC.combinations(list, 2)}
+
+  def remove_intersecting_pairs_from_set({set, pairs}), do: Enum.reduce(pairs, set, fn pair, acc -> update_set(acc, pair, intersect_rectangles(pair)) end)
+
+  def update_set(set, _, nil), do: set
+  def update_set(set, [rect1, rect2], _), do: set |> MapSet.delete(rect1) |> MapSet.delete(rect2)
 end
