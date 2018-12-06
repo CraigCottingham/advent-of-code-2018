@@ -6,27 +6,46 @@ defmodule AoC.Day04 do
     |> Enum.map(&String.trim/1)
     |> Enum.sort()
     |> Enum.map(&parse_input_line!/1)
-    |> Enum.map(&massage_event/1)
+    |> Enum.map(&adjust_date/1)
+    |> Enum.map(&clean_events/1)
     |> Enum.chunk_while([], &chunk_by_date/2, &after_chunk_by_date/1)
     |> Enum.reject(fn chunk -> Enum.empty?(chunk) end)
     |> Enum.map(&List.flatten/1)
-    |> Enum.map(&massage_day/1)
+    |> Enum.map(&reduce_day_events/1)
     |> Enum.reduce(%{}, fn {day_data, _} = day, acc -> Map.update(acc, day_data.id, [day], fn list -> [list, day] end) end)
-    |> Enum.reduce(%{}, fn {id, day_list}, acc -> Map.put(acc, id, {day_list |> List.flatten() |> count_minutes(), day_list |> List.flatten()}) end)
+    |> Enum.reduce(%{}, fn {id, day_list}, acc -> Map.put(acc, id, List.flatten(day_list)) end)
+    |> Enum.reduce(%{}, fn {id, day_list}, acc -> Map.put(acc, id, {day_list |> count_minutes(), day_list}) end)
+    |> Enum.reject(fn {_id, day_list} -> elem(day_list, 0) == 0 end)
+    |> Enum.reduce(%{}, fn {id, day_list}, acc -> Map.put(acc, id, convert_days_to_ranges({id, day_list}) |> elem(1)) end)
     |> Enum.max_by(fn {_id, {minutes, _day_list}} -> minutes end)
-    |> convert_days_to_ranges()
+    |> strip_minutes()
     |> expand_ranges()
     |> find_max_minute()
     |> calculate_part_1_answer()
   end
 
   def part_2 do
-    # File.stream!("data/day04-input.txt")
-    # |> Enum.map(&String.trim/1)
-    # |> Enum.sort()
-    # |> Enum.map(&parse_input_line!/1)
-
-    0
+    File.stream!("data/day04-input.txt")
+    |> Enum.map(&String.trim/1)
+    |> Enum.sort()
+    |> Enum.map(&parse_input_line!/1)
+    |> Enum.map(&adjust_date/1)
+    |> Enum.map(&clean_events/1)
+    |> Enum.chunk_while([], &chunk_by_date/2, &after_chunk_by_date/1)
+    |> Enum.reject(fn chunk -> Enum.empty?(chunk) end)
+    |> Enum.map(&List.flatten/1)
+    |> Enum.map(&reduce_day_events/1)
+    |> Enum.reduce(%{}, fn {day_data, _} = day, acc -> Map.update(acc, day_data.id, [day], fn list -> [list, day] end) end)
+    |> Enum.reduce(%{}, fn {id, day_list}, acc -> Map.put(acc, id, List.flatten(day_list)) end)
+    |> Enum.reduce(%{}, fn {id, day_list}, acc -> Map.put(acc, id, {day_list |> count_minutes(), day_list}) end)
+    |> Enum.reject(fn {_id, day_list} -> elem(day_list, 0) == 0 end)
+    |> Enum.reduce(%{}, fn {id, day_list}, acc -> Map.put(acc, id, convert_days_to_ranges({id, day_list}) |> elem(1)) end)
+    |> Enum.reduce(%{}, fn {id, _} = item, acc -> Map.put(acc, id, strip_minutes(item) |> elem(1)) end)
+    |> Enum.reduce(%{}, fn {id, _} = item, acc -> Map.put(acc, id, expand_ranges(item) |> elem(1)) end)
+    |> Enum.reduce(%{}, &pivot_minute_map/2)
+    |> Enum.reduce(%{}, &find_max_days_per_minute/2)
+    |> Enum.max_by(fn {_minute, {_id, count}} -> count end)
+    |> calculate_part_2_answer()
   end
 
   def parse_input_line!(line) do
@@ -57,55 +76,57 @@ defmodule AoC.Day04 do
   def regex_wake(), do: ~r/\A\[(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})\s+(?<hour>\d{2}):(?<minute>\d{2})\]\s+(?<up>wakes\s+up)\b/
 
   # roll day forward
-  def massage_event({:changeover, %{day: day, hour: hour} = data}) when (hour > 0),
-    do: massage_event({:changeover, %{data | day: (day + 1), hour: 0}})
+  def adjust_date({:changeover, %{day: day, hour: hour} = data}) when (hour > 0),
+    do: adjust_date({:changeover, %{data | day: (day + 1), hour: 0}})
 
   # roll month forward
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 1) and (day > 31)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 2) and (day > 28)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 3) and (day > 31)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 4) and (day > 30)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 5) and (day > 31)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 6) and (day > 30)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 7) and (day > 31)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 8) and (day > 31)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 9) and (day > 30)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 10) and (day > 31)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 11) and (day > 30)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
-  def massage_event({:changeover, %{month: month, day: day} = data}) when ((month == 12) and (day > 31)),
-    do: massage_event({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 1) and (day > 31)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 2) and (day > 28)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 3) and (day > 31)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 4) and (day > 30)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 5) and (day > 31)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 6) and (day > 30)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 7) and (day > 31)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 8) and (day > 31)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 9) and (day > 30)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 10) and (day > 31)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 11) and (day > 30)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
+  def adjust_date({:changeover, %{month: month, day: day} = data}) when ((month == 12) and (day > 31)),
+    do: adjust_date({:changeover, %{data | month: (month + 1), day: 1}})
 
   # roll year forward
-  def massage_event({:changeover, %{year: year, month: month} = data}) when (month > 12),
-    do: massage_event({:changeover, %{data | year: (year + 1), month: 1}})
+  def adjust_date({:changeover, %{year: year, month: month} = data}) when (month > 12),
+    do: adjust_date({:changeover, %{data | year: (year + 1), month: 1}})
+
+  def adjust_date(event), do: event
 
   # strip unneeded keys from events
-  def massage_event({:changeover, %{hour: _} = data}), do: massage_event({:changeover, data |> Map.delete(:hour) |> Map.delete(:minute)})
-  def massage_event({:down, %{down: _} = data}), do: massage_event({:down, data |> Map.delete(:year) |> Map.delete(:month) |> Map.delete(:day) |> Map.delete(:down)})
-  def massage_event({:up, %{up: _} = data}), do: massage_event({:up, data |> Map.delete(:year) |> Map.delete(:month) |> Map.delete(:day) |> Map.delete(:up)})
+  def clean_events({:changeover, %{hour: _} = data}), do: clean_events({:changeover, data |> Map.delete(:hour) |> Map.delete(:minute)})
+  def clean_events({:down, %{down: _} = data}), do: clean_events({:down, data |> Map.delete(:year) |> Map.delete(:month) |> Map.delete(:day) |> Map.delete(:down)})
+  def clean_events({:up, %{up: _} = data}), do: clean_events({:up, data |> Map.delete(:year) |> Map.delete(:month) |> Map.delete(:day) |> Map.delete(:up)})
 
-  def massage_event(event), do: event
+  def clean_events(event), do: event
 
   def chunk_by_date({:changeover, _} = data, acc), do: {:cont, acc, [data]}
   def chunk_by_date(data, acc), do: {:cont, [acc, data]}
 
   def after_chunk_by_date(acc), do: {:cont, acc, []}
 
-  def massage_day([{:changeover, day_data} | events]), do: massage_day({day_data, []}, events)
+  def reduce_day_events([{:changeover, day_data} | events]), do: reduce_day_events({day_data, []}, events)
 
-  def massage_day({day_data, event_list}, []), do: {day_data, event_list |> List.flatten}
-  def massage_day({day_data, event_list}, [{_, event_data} | events]), do: massage_day({day_data, [event_list, event_data]}, events)
+  def reduce_day_events({day_data, event_list}, []), do: {day_data, event_list |> List.flatten}
+  def reduce_day_events({day_data, event_list}, [{_, event_data} | events]), do: reduce_day_events({day_data, [event_list, event_data]}, events)
 
   def count_minutes(day_list), do: Enum.reduce(day_list, 0, &count_minutes/2)
 
@@ -127,14 +148,29 @@ defmodule AoC.Day04 do
 
   def time_to_minutes(%{hour: hour, minute: minute}), do: (hour * 60) + minute
 
-  def expand_ranges({id, {minutes, ranges}}), do: {id, {minutes, Enum.reduce(ranges, %{}, &expand_range/2)}}
+  def strip_minutes({id, {_, range_list}}), do: {id, range_list}
+
+  def expand_ranges({id, range_list}), do: {id, Enum.reduce(range_list, %{}, &expand_range/2)}
 
   def expand_range(range, acc), do: Enum.reduce(range, acc, fn minute, acc2 -> Map.get_and_update(acc2, minute, &increment_minute/1) |> elem(1) end)
 
   def increment_minute(nil), do: {nil, 1}
   def increment_minute(value), do: {value, value + 1}
 
-  def find_max_minute({id, {_, minute_map}}), do: {id, Enum.max_by(minute_map, fn {_, v} -> v end) |> elem(0)}
+  def find_max_minute({id, minute_map}), do: {id, Enum.max_by(minute_map, fn {_, v} -> v end) |> elem(0)}
 
   def calculate_part_1_answer({id, minute}), do: (id * minute)
+
+  def pivot_minute_map({id, minute_map}, acc) do
+    Enum.reduce(minute_map, acc, fn {minute, count}, acc2 ->
+                                   value = Map.get(acc2, minute, %{}) |> Map.put(id, count)
+                                   Map.put(acc2, minute, value)
+                                 end)
+  end
+
+  def find_max_days_per_minute({minute, guard_map}, acc) do
+    Map.put(acc, minute, Enum.max_by(guard_map, fn {_id, count} -> count end))
+  end
+
+  def calculate_part_2_answer({minute, {id, _count}}), do: (id * minute)
 end
