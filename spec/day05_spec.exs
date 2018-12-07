@@ -9,7 +9,7 @@ defmodule AoC.Day05.Spec do
 
     it do
       expect(AoC.Day05.part_1()) |> to(eq(10))
-      expect(AoC.Day05.part_2()) |> to(eq(0))
+      expect(AoC.Day05.part_2()) |> to(eq(4))
     end
   end
 end
